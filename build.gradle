@@ -79,6 +79,7 @@ neoForge {
 
 def resourceProperties = [version: project.version.toString()]
 tasks.named('processResources', ProcessResources) {
+    from('LICENSE')   // the MIT licence travels in the jar
     inputs.properties resourceProperties
     filesMatching('META-INF/neoforge.mods.toml') { expand(resourceProperties) }
 }

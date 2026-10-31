@@ -229,3 +229,7 @@ NeoForge 1.21.1 mod: on first join the world's host picks a path, **Classic** or
 - **Frame sprites:** GUI sprites `assets/<ns>/textures/gui/sprites/<path>.png` with states `<path>`, `<path>_hovered`, `<path>_selected`; scaling (and optional animation) in `<path>.png.mcmeta`, e.g. `nine_slice`. A difficulty's own `frame` wins over the layout's.
 - **KubeJS** (optional, loaded only with KubeJS): startup `PathboundEvents.register(e => e.add(id, d => ...) / e.modify(id, d => ...) / e.remove(id))`; server `PathboundEvents.beforeChoose` (`e.cancel()` refuses), `afterChoose` (`e.player` may be null), `playerJoin`; binding `Pathbound.get(server) / set(server, id) / ids() / info(id) / isChosen(server)`.
 - **Build and checks:** see the commands above.
+
+---
+
+Лицензия: [MIT](LICENSE). / License: [MIT](LICENSE).
