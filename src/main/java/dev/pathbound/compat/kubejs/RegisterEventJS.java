@@ -10,7 +10,7 @@ import java.util.function.Consumer;
  * PathboundEvents.register: runs when a world starts, after config/pathbound/difficulties.json is read.
  * <pre>
  * PathboundEvents.register(e => {
- *   e.add('nightmare', d => d.name({en_us: 'Nightmare', ru_ru: 'Кошмар'}).color('#FF4040').order(2)
+ *   e.add('nightmare', d => d.name({en_us: 'Nightmare', de_de: 'Albtraum'}).color('#FF4040').order(2)
  *     .stage('nightmare').datapack('config:nightmare').command('say Nightmare begins'))
  *   e.modify('hard', d => d.color(0xFF8040))
  *   e.remove('normal')

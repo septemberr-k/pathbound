@@ -14,7 +14,7 @@ import net.minecraft.network.chat.ComponentSerialization;
  * <ul>
  *   <li>a plain string: a literal ("Nightmare");</li>
  *   <li>a text component: {"translate": "my.key"} or {"text": "...", "color": "red"};</li>
- *   <li>one string per language: {"en_us": "Nightmare", "ru_ru": "Кошмар"} (falls back to en_us, then any).</li>
+ *   <li>one string per language: {"en_us": "Nightmare", "de_de": "Albtraum"} (falls back to en_us, then any).</li>
  * </ul>
  * Kept as JSON so the server can send it to clients unchanged; the client resolves it in its own language.
  */
