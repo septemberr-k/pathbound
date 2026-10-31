@@ -1,0 +1,26 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "All Rights Reserved"
+
+[[mods]]
+modId = "pathbound"
+version = "${version}"
+displayName = "Pathbound"
+authors = "septemberrk"
+description = '''Choose your path once per world. Classic or Trial out of the box; every difficulty, its player stages, datapacks, commands and the look of the chooser are data (config, resource packs, KubeJS scripts).'''
+logoFile = "pathbound_logo.png"
+logoBlur = false
+
+[[dependencies.pathbound]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.pathbound]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.21.2)"
+ordering = "NONE"
+side = "BOTH"

@@ -1,0 +1,20 @@
+{
+  "pathbound.title": "Выберите путь",
+  "pathbound.subtitle": "Выбор делается один раз для этого мира, изменить его потом нельзя.",
+  "pathbound.waiting": "Хозяин мира выбирает сложность...",
+  "pathbound.mode.none": "Не выбрана",
+  "pathbound.mode.classic": "Классика",
+  "pathbound.mode.trial": "Испытание",
+  "pathbound.desc.classic": "Знакомая дорога: мир таким, каким он задуман, в вашем темпе. Хороший выбор для первого путешествия.",
+  "pathbound.desc.trial": "Трудная дорога: мир ставит более жёсткие правила и требует большего. Для тех, кто ищет вызов.",
+  "pathbound.pick": "Нажмите, чтобы выбрать",
+  "pathbound.confirm.title": "Играть в режиме «%s»?",
+  "pathbound.confirm.text": "Сложность выбирается один раз для этого мира, из игры её изменить нельзя.",
+  "pathbound.chosen": "Сложность мира: %s",
+  "pathbound.cmd.current": "Текущая сложность мира: %s",
+  "pathbound.configuration.defaultMode": "Сложность по умолчанию",
+  "pathbound.configuration.defaultMode.tooltip": "Id сложности для мира, где она ещё не выбрана. «none» — показать выбор при первом входе.",
+  "pathbound.refused": "Сейчас нельзя выбрать «%s».",
+  "pathbound.cmd.unknown": "Неизвестная сложность %s. Есть: %s",
+  "pathbound.cmd.choose": "Выбор сложности сброшен, хозяин может выбрать заново."
+}

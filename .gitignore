@@ -1,0 +1,12 @@
+.tools/
+.gradle/
+build/
+run/
+reference/
+.idea/
+*.iml
+local.properties
+logs/
+*.log
+__pycache__/
+*.py[cod]

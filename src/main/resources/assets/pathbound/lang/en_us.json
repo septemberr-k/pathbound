@@ -1,0 +1,20 @@
+{
+  "pathbound.title": "Choose your path",
+  "pathbound.subtitle": "This choice is made once per world and cannot be changed later.",
+  "pathbound.waiting": "The world host is choosing the difficulty...",
+  "pathbound.mode.none": "Not chosen",
+  "pathbound.mode.classic": "Classic",
+  "pathbound.mode.trial": "Trial",
+  "pathbound.desc.classic": "Walk the familiar road: the world as it was made, at your own pace. A good choice for a first journey.",
+  "pathbound.desc.trial": "Take the harder road: this world sets tougher rules and asks more of you. For those who seek a challenge.",
+  "pathbound.pick": "Click to choose",
+  "pathbound.confirm.title": "Play in %s mode?",
+  "pathbound.confirm.text": "The difficulty is chosen once for this world and cannot be changed from the game.",
+  "pathbound.chosen": "World difficulty: %s",
+  "pathbound.cmd.current": "Current world difficulty: %s",
+  "pathbound.configuration.defaultMode": "Default difficulty",
+  "pathbound.configuration.defaultMode.tooltip": "Difficulty id for a world that has none yet. \"none\" shows the chooser on first join.",
+  "pathbound.refused": "You cannot choose %s now.",
+  "pathbound.cmd.unknown": "Unknown difficulty %s. Known: %s",
+  "pathbound.cmd.choose": "Difficulty choice cleared; the host can choose again."
+}

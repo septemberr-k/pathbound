@@ -1,0 +1,25 @@
+{
+  "_comment": "Difficulties of the Pathbound chooser. Format: see the Pathbound README. Restart the world (or the server) after editing.",
+  "difficulties": [
+    {
+      "id": "classic",
+      "name": { "translate": "pathbound.mode.classic" },
+      "description": { "translate": "pathbound.desc.classic" },
+      "color": "#8BC34A",
+      "order": 0,
+      "stages": ["pathbound_classic"],
+      "datapacks": [],
+      "commands": []
+    },
+    {
+      "id": "trial",
+      "name": { "translate": "pathbound.mode.trial" },
+      "description": { "translate": "pathbound.desc.trial" },
+      "color": "#B48CFF",
+      "order": 1,
+      "stages": ["pathbound_trial"],
+      "datapacks": [],
+      "commands": []
+    }
+  ]
+}

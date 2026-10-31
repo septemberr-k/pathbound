@@ -1,0 +1,170 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = mod_version
+group = mod_group_id
+base { archivesName = 'pathbound' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+// Dev-only code: GameTests and the scripted client check. Neither ships in the jar.
+sourceSets {
+    gameTest {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+    clientValidation {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+
+neoForge {
+    version = project.neo_version
+    runs {
+        client { client() }
+        server { server(); programArgument '--nogui' }
+        gameTestServer {
+            type = 'gameTestServer'
+            gameDirectory = project.file('run/gametest')
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+        // ./gradlew runDifficultyValidation -PvalidationChoice=<id> [-PvalidationProps="pathbound.expectCards=3;..."] [-PvalidationOut=name]
+        difficultyValidation {
+            client()
+            sourceSet = sourceSets.clientValidation
+            gameDirectory = project.file('run/difficulty-validation')
+            def choice = providers.gradleProperty('validationChoice').getOrElse('hard')
+            systemProperty 'pathbound.difficultyValidation', choice
+            systemProperty 'pathbound.validationOutput', project.file('build/ci/difficulty/' + providers.gradleProperty('validationOut').getOrElse(choice)).absolutePath
+            providers.gradleProperty('validationProps').getOrElse('').split(';').findAll { it.contains('=') }.each {
+                def kv = it.split('=', 2)
+                systemProperty kv[0].trim(), kv[1].trim()
+            }
+            programArguments.addAll '--width', '1280', '--height', '720'
+        }
+        // Dedicated server checks (ServerSmoke): start, /pathbound commands from the console, the trial test pack, stop.
+        // Each needs eula.txt in its folder, written by whoever accepts the Minecraft EULA.
+        serverCheck {
+            server()
+            programArgument '--nogui'
+            gameDirectory = project.file('run/server-check')
+            systemProperty 'pathbound.serverSmoke', 'true'
+        }
+        serverCheckKubejs {
+            server()
+            sourceSet = sourceSets.clientValidation   // its runtime classpath has the KubeJS and FTB jars
+            programArgument '--nogui'
+            gameDirectory = project.file('run/server-check-kubejs')
+            systemProperty 'pathbound.serverSmoke', 'true'
+        }
+        serverCheckDefault {
+            server()
+            programArgument '--nogui'
+            gameDirectory = project.file('run/server-check-default')
+            systemProperty 'pathbound.serverSmoke', 'true'
+            systemProperty 'pathbound.smokeExpectMode', 'trial'
+        }
+        configureEach { logLevel = org.slf4j.event.Level.INFO }
+    }
+    mods {
+        pathbound {
+            sourceSet(sourceSets.main)
+            sourceSet(sourceSets.gameTest)
+            sourceSet(sourceSets.clientValidation)
+        }
+    }
+}
+
+def resourceProperties = [version: project.version.toString()]
+tasks.named('processResources', ProcessResources) {
+    inputs.properties resourceProperties
+    filesMatching('META-INF/neoforge.mods.toml') { expand(resourceProperties) }
+}
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+tasks.named('build') { dependsOn 'gameTestClasses', 'clientValidationClasses' }
+
+// FTB Quests / KubeJS jars for the dev runs only (the client check reads real quest data through them). Nothing here
+// reaches src/main or the mod jar. Folder: -PpackMods=..., or packMods=... in local.properties (not in git).
+def localProps = new Properties()
+if (file('local.properties').isFile()) file('local.properties').withInputStream { localProps.load(it) }
+def packMods = file(providers.gradleProperty('packMods').getOrElse(localProps.getProperty('packMods', 'packmods')))
+def packJars = ['architectury-13.0.11-neoforge', 'ftb-library-neoforge-2101.1.39', 'ftb-teams-neoforge-2101.1.11',
+                'ftb-quests-neoforge-2101.1.37', 'ftb-xmod-compat-neoforge-21.1.14',
+                'kubejs-neoforge-2101.7.2-build.377', 'rhino-2101.2.7-build.85'].collect { new File(packMods, it + '.jar') }
+// The KubeJS module (compat/kubejs) compiles against KubeJS, Rhino and Architectury; they never ship in the jar.
+def kubeJars = packJars.findAll { it.name.startsWith('kubejs') || it.name.startsWith('rhino') || it.name.startsWith('architectury') }
+if (kubeJars.every { it.isFile() }) {
+    dependencies { compileOnly files(kubeJars) }
+} else {
+    logger.warn('KubeJS jars not found in {}; building without the KubeJS module', packMods)
+    sourceSets.main.java.exclude 'dev/pathbound/compat/kubejs/**'
+}
+// -PnoPackMods starts the client check without FTB Quests and KubeJS (plain chooser, no quest checks).
+if (packJars.every { it.isFile() }) {
+    dependencies {
+        clientValidationCompileOnly files(packJars)
+        // Only the client validation run sees them: KubeJS sends its own payloads to GameTest mock players.
+        if (!providers.gradleProperty('noPackMods').isPresent()) clientValidationRuntimeOnly files(packJars)
+    }
+}
+
+// GameTests and server checks: config/pathbound from src/gameTest/config (the default difficulties, trial with the
+// test pack config:test_trial, whose torch recipe gives 2), copied fresh before each run.
+['runGameTestServer': 'run/gametest', 'runServerCheck': 'run/server-check', 'runServerCheckKubejs': 'run/server-check-kubejs',
+ 'runServerCheckDefault': 'run/server-check-default'].each { String runTask, String dir ->
+    def prep = tasks.register('prepareConfig' + runTask.substring(3), Sync) {
+        into dir + '/config/pathbound'
+        from 'src/gameTest/config'
+    }
+    tasks.matching { it.name == runTask }.configureEach { dependsOn prep }
+}
+
+// The client check runs a modpack's real setup: its config/pathbound (difficulties normal / hard, datapack
+// config:trq_hard) and its generated difficulty quest chapters. FTB Quests rewrites quest files on load, so every run
+// starts from fresh copies. -PpackConfig=... and -PquestSource=... point elsewhere.
+def packConfig = file(providers.gradleProperty('packConfig').getOrElse('../thaumaturge-quests/pathbound_pack/config/pathbound'))
+def questSource = file(providers.gradleProperty('questSource').getOrElse('../thaumaturge-quests/out/quests'))
+def validationConfig = tasks.register('prepareValidationConfig', Sync) {
+    into 'run/difficulty-validation/config/pathbound'
+    from packConfig
+}
+def questBook = tasks.register('prepareQuestBook', Sync) {
+    into 'run/difficulty-validation/config/ftbquests/quests'
+    from(new File(questSource, 'chapters')) { include 'trq_mode*.snbt'; into 'chapters' }
+    from('src/clientValidation/quests')
+}
+// kubejs/ of the validation run: the modpack's chooser theme (-PpackAssets=..., its kubejs/assets) and the test frame;
+// the test scripts (a third difficulty, a refused hard) only for -PvalidationChoice=nightmare.
+def packAssets = file(providers.gradleProperty('packAssets').getOrElse('../thaumaturge-quests/pathbound_pack/kubejs/assets'))
+def withScripts = providers.gradleProperty('validationChoice').getOrElse('hard') == 'nightmare'
+def kubejsDir = tasks.register('prepareKubejs', Sync) {
+    into 'run/difficulty-validation/kubejs'
+    from(packAssets) { into 'assets' }
+    from('src/clientValidation/kubejs/assets') { into 'assets' }
+    if (withScripts) from('src/clientValidation/kubejs') { include 'startup_scripts/**', 'server_scripts/**' }
+    preserve { include '**'; exclude 'assets/**', 'startup_scripts/**', 'server_scripts/**' }
+}
+tasks.matching { it.name == 'runDifficultyValidation' }.configureEach { dependsOn validationConfig, questBook, kubejsDir }
+
+// serverCheckDefault: a fresh world and defaultMode = "trial" in the server config.
+def serverDefaultDir = file('run/server-check-default')
+def prepareServerDefault = tasks.register('prepareServerCheckDefault') {
+    outputs.upToDateWhen { false }
+    doLast {
+        new File(serverDefaultDir, 'world').deleteDir()
+        def cfg = new File(serverDefaultDir, 'config/pathbound-server.toml')
+        cfg.parentFile.mkdirs()
+        cfg.text = 'defaultMode = "trial"' + System.lineSeparator()
+    }
+}
+tasks.matching { it.name == 'runServerCheckDefault' }.configureEach { dependsOn prepareServerDefault }
+
+// Fast unit tests without a game (animation math).
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.11.3')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+tasks.named('test', Test) { useJUnitPlatform() }

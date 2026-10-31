@@ -1,0 +1,25 @@
+{
+  "_comment": "GameTests and server checks: the default difficulties, trial with the test pack config:test_trial (torch gives 2).",
+  "difficulties": [
+    {
+      "id": "classic",
+      "name": { "translate": "pathbound.mode.classic" },
+      "description": { "translate": "pathbound.desc.classic" },
+      "color": "#8BC34A",
+      "order": 0,
+      "stages": ["pathbound_classic"],
+      "datapacks": [],
+      "commands": []
+    },
+    {
+      "id": "trial",
+      "name": { "translate": "pathbound.mode.trial" },
+      "description": { "translate": "pathbound.desc.trial" },
+      "color": "#B48CFF",
+      "order": 1,
+      "stages": ["pathbound_trial"],
+      "datapacks": ["config:test_trial"],
+      "commands": []
+    }
+  ]
+}
