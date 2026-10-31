@@ -1,6 +1,4 @@
-<img src="branding/icon.png" width="128" alt="Pathbound">
-
-# Pathbound
+<p align="center"><img src="branding/logo.png" width="600" alt="Pathbound"></p>
 
 **Выберите путь — один раз на мир.**
 

@@ -1,6 +1,4 @@
-# Pathbound
-
-<img src="branding/icon.png" width="160" alt="Pathbound">
+<p align="center"><img src="branding/logo.png" width="600" alt="Pathbound"></p>
 
 Мод для NeoForge 1.21.1 (NeoForge 21.1.265+). При первом входе в мир хозяин выбирает путь: **Классика** или **Испытание**. Выбор делается один раз. Сложности, их стадии, датапаки, команды и вид экрана выбора задаются данными: конфигом, ресурс-паком и (по желанию) скриптами KubeJS. Сборке не нужен свой jar.
 *English version below.*
