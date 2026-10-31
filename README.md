@@ -2,6 +2,8 @@
 
 A NeoForge 1.21.1 mod (NeoForge 21.1.265+). On first join the world's host picks a path, **Classic** or **Trial**, once per world. Difficulties, their player stages, datapacks and commands, and the look of the chooser are data: a config file, any resource pack and optional KubeJS scripts. A modpack needs no jar of its own.
 
+https://www.curseforge.com/minecraft/mc-mods/pathbound-world-difficulty
+
 ## How it works
 
 - While the world has no difficulty (`none`), the host (or an operator on a server) sees the chooser. Esc does not close it. Other players see "The world host is choosing the difficulty..." and can close that notice.
