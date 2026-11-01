@@ -169,12 +169,14 @@ public final class ServerLogic {
         }
         syncPacks(server, mode);
         if (d != null) {
-            // Commands may need the difficulty's datapacks (functions, recipes), so they wait for the reload.
+            // Commands may need the difficulty's datapacks (functions, recipes), and a reload also reloads the KubeJS server
+            // scripts, so commands and afterChoose wait for it.
             afterReload(server, () -> {
                 // Skip them if the difficulty was changed again while the data reloaded.
-                if (DifficultyData.get(server).mode().equals(d.id())) runCommands(server, d);
+                if (!DifficultyData.get(server).mode().equals(d.id())) return;
+                runCommands(server, d);
+                Hooks.afterChoose.chosen(server, chooser, d);
             });
-            Hooks.afterChoose.chosen(server, chooser, d);
         }
     }
 
@@ -238,7 +240,10 @@ public final class ServerLogic {
         else task.run();
     }
 
-    /** Enables the chosen difficulty's datapacks, disables every other difficulty's, and reloads data if that changed. */
+    /**
+     * Enables the chosen difficulty's datapacks, disables every other difficulty's, and reloads data if that changed or
+     * if {@link Hooks#needsDataReload} asks for it.
+     */
     static void syncPacks(MinecraftServer server, String mode) {
         // A reload left behind by a world that was closed (singleplayer) never concerns this server.
         if (reloadServer == server && reloadPending()) {
@@ -265,9 +270,12 @@ public final class ServerLogic {
             pack.getDefaultPosition().insert(selected, pack, Pack::selectionConfig, false);
             changed = true;
         }
-        if (!changed) return;
+        // Script recipes (KubeJS) may depend on the difficulty without any datapack: then reload all the same.
+        boolean forced = !changed && Hooks.needsDataReload.test(mode);
+        if (!changed && !forced) return;
         List<String> ids = selected.stream().map(Pack::getId).toList();
-        LOG.info("Difficulty {}: datapacks now {}", mode, ids.stream().filter(managed::contains).toList());
+        if (forced) LOG.info("Difficulty {}: reloading data for its script recipes", mode);
+        else LOG.info("Difficulty {}: datapacks now {}", mode, ids.stream().filter(managed::contains).toList());
         reloadServer = server;
         reload = server.reloadResources(ids).exceptionally(error -> {
             LOG.warn("Failed to reload data packs", error);

@@ -17,6 +17,15 @@ public final class PathboundBinding {
         return DifficultyData.get(server).mode();
     }
 
+    /**
+     * The running world's difficulty id without a server at hand ("none" if not chosen, or while the first data load
+     * of a world runs, before the world exists). For recipes use PathboundEvents.recipes, which handles that load.
+     */
+    public static String current() {
+        String mode = DifficultyApi.currentOrNull();
+        return mode == null ? Difficulty.NONE : mode;
+    }
+
     public static boolean isChosen(MinecraftServer server) {
         return DifficultyData.get(server).chosen();
     }

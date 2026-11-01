@@ -82,6 +82,37 @@ public final class DifficultyGameTests {
         h.succeed();
     }
 
+    /** Script recipes (Hooks.needsDataReload) get a data reload on a choice even when no datapack changes. */
+    @GameTest(template = "empty", batch = "scriptReload", timeoutTicks = 400)
+    public static void aDifficultyWithScriptRecipesReloadsData(GameTestHelper h) {
+        MinecraftServer server = h.getLevel().getServer();
+        var before = Hooks.needsDataReload;
+        // A data reload replaces the server's resources object; a small test world may reload within the same tick.
+        Object[] resources = new Object[1];
+        h.startSequence()
+                .thenWaitUntil(() -> h.assertTrue(!ServerLogic.reloadPending(), "No reload before the test"))
+                .thenExecute(() -> {
+                    resources[0] = server.getServerResources();
+                    Hooks.needsDataReload = mode -> mode.equals("classic");
+                    ServerLogic.setMode(server, "classic", null);
+                })
+                .thenWaitUntil(() -> h.assertTrue(!ServerLogic.reloadPending() && server.getServerResources() != resources[0],
+                        "classic has no datapacks, but the hook asked for a reload"))
+                .thenExecute(() -> {
+                    resources[0] = server.getServerResources();
+                    Hooks.needsDataReload = before;
+                    ServerLogic.setMode(server, "none", null);
+                })
+                .thenExecuteAfter(20, () -> h.assertTrue(server.getServerResources() == resources[0], "Without the hook, none (no packs) does not reload"))
+                .thenSucceed();
+    }
+
+    @AfterBatch(batch = "scriptReload")
+    public static void restoreAfterScriptReload(ServerLevel level) {
+        Hooks.needsDataReload = mode -> false;
+        restoreAfterPack(level);
+    }
+
     @GameTest(template = "empty", batch = "stages", timeoutTicks = 400)
     public static void choosingTrialSwapsThePlayerStage(GameTestHelper h) {
         MinecraftServer server = h.getLevel().getServer();

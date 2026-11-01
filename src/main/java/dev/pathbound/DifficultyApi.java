@@ -2,6 +2,7 @@ package dev.pathbound;
 
 import java.util.List;
 import net.minecraft.server.MinecraftServer;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /** Java API for other mods and the KubeJS binding. Call on the server thread. */
 public final class DifficultyApi {
@@ -10,6 +11,16 @@ public final class DifficultyApi {
 
     /** The world's difficulty id, or "none". */
     public static String get(MinecraftServer server) {
+        return DifficultyData.get(server).mode();
+    }
+
+    /**
+     * The running server's world difficulty id ("none" if not chosen), or null when no world is up yet: the first data
+     * load of a world happens before the world exists.
+     */
+    public static String currentOrNull() {
+        MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+        if (server == null || server.overworld() == null) return null;
         return DifficultyData.get(server).mode();
     }
 

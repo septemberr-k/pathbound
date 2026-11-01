@@ -35,13 +35,17 @@ import org.slf4j.Logger;
  * -Dpathbound.expectCards=N checks the number of cards, -Dpathbound.refuseFirst=&lt;id&gt; first picks a difficulty a script must
  * refuse, -Dpathbound.expectTorch=N the torch recipe count, -Dpathbound.expectTag=tag a tag a script adds after the choice,
  * -Dpathbound.sizes=true adds chooser frames at other window sizes, -Dpathbound.animFrames=true frames of the animations,
- * -Dpathbound.testChoose=true runs /pathbound choose as the world owner without cheats.
+ * -Dpathbound.testChoose=true runs /pathbound choose as the world owner without cheats. -Dpathbound.expectRecipes=ids /
+ * -Dpathbound.expectNoRecipes=ids check script recipes (PathboundEvents.recipes), -Dpathbound.rejoin=true leaves and
+ * reopens the world after the choice and checks them again.
  * Frames and proof.txt go to -Dpathbound.validationOutput. Dev-only source set; never in the jar.
  */
 @EventBusSubscriber(modid = Pathbound.MODID, value = Dist.CLIENT)
 public final class DifficultyValidation {
     private static final Logger LOG = LogUtils.getLogger();
     private static final String CHOICE = System.getProperty("pathbound.difficultyValidation");
+    /** The world created for this run, reopened by -Dpathbound.rejoin=true. */
+    private static String levelId;
     private static final String REFUSE = System.getProperty("pathbound.refuseFirst", "");
     private static final List<String> PROOF = new ArrayList<>();
     private static final List<String> CHAT = new ArrayList<>();
@@ -81,7 +85,8 @@ public final class DifficultyValidation {
                 rules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
                 rules.getRule(GameRules.RULE_DAYLIGHT).set(false, null);
                 var settings = new LevelSettings("Difficulty " + CHOICE, GameType.SURVIVAL, false, net.minecraft.world.Difficulty.PEACEFUL, false, rules, WorldDataConfiguration.DEFAULT);
-                mc.createWorldOpenFlows().createFreshLevel("pathbound-" + CHOICE + "-" + System.currentTimeMillis(), settings, new WorldOptions(1937L, false, false),
+                levelId = "pathbound-" + CHOICE + "-" + System.currentTimeMillis();
+                mc.createWorldOpenFlows().createFreshLevel(levelId, settings, new WorldOptions(1937L, false, false),
                         access -> access.registryOrThrow(Registries.WORLD_PRESET).getHolderOrThrow(WorldPresets.FLAT).value().createWorldDimensions(), mc.screen);
                 next("Created a fresh FLAT world");
             }
@@ -160,11 +165,13 @@ public final class DifficultyValidation {
                     if (ticks - at > 1200) fail("Client torch recipe gives " + count + ", expected " + expected);
                     return;
                 }
-                if (serverReport == null) {
+                // a difficulty without datapacks may still reload for script recipes: wait until that is over too
+                if (serverReport == null || serverReport.contains("reloading=true") || ticks - at < 40) {
+                    if (serverReport != null && ticks - at > 1200) fail("Server still reloading: " + serverReport);
+                    serverReport = null;
                     if (ticks % 10 == 0) askServer();
                     return;
                 }
-                if (ticks - at < 40) return;
                 PROOF.add("client torch recipe count: " + count);
                 PROOF.add("server after choice: " + serverReport);
                 require(serverReport.startsWith("mode=" + CHOICE + " "), "Server difficulty after the choice: " + serverReport);
@@ -175,13 +182,18 @@ public final class DifficultyValidation {
                 require(CHAT.contains(line), "Chat line '" + line + "' not received; chat: " + CHAT);
                 String tag = System.getProperty("pathbound.expectTag", "");
                 if (!tag.isEmpty()) require(serverReport.contains(tag), "Tag " + tag + " from afterChoose missing: " + serverReport);
+                checkScriptRecipes(serverReport);
                 PROOF.add("chat: " + CHAT);
                 frame("03-after");
                 next("State after the choice verified");
                 serverReport = null;
+                if (Boolean.getBoolean("pathbound.rejoin")) {
+                    step = 30;
+                    return;
+                }
                 questStart = mc.getSingleplayerServer().getTickCount();
-                if (!ftbQuests()) {
-                    PROOF.add("FTB Quests not on the classpath; quest checks skipped");
+                if (!ftbQuests() || Boolean.getBoolean("pathbound.skipQuests")) {
+                    PROOF.add("FTB Quests absent or -Dpathbound.skipQuests=true; quest checks skipped");
                     step = 9;
                 }
             }
@@ -315,6 +327,39 @@ public final class DifficultyValidation {
                 next("Hover lift frames saved");
                 step = 11;
             }
+            case 30 -> {
+                // Leave and reopen the world: the first data load of a world runs before the world exists, so script
+                // recipes that depend on the difficulty need the reload Pathbound starts once the world is up.
+                mc.level.disconnect();
+                mc.disconnect(new net.minecraft.client.gui.screens.GenericMessageScreen(net.minecraft.network.chat.Component.literal("Saving")));
+                next("Left the world to reopen it");
+            }
+            case 31 -> {
+                if (mc.level != null || mc.getSingleplayerServer() != null) return;
+                mc.createWorldOpenFlows().openWorld(levelId, () -> fail("Reopening " + levelId + " was cancelled"));
+                next("Reopening " + levelId);
+            }
+            case 32 -> {
+                if (mc.player == null || mc.getSingleplayerServer() == null || mc.getOverlay() != null) return;
+                if (!ClientLogic.mode.equals(CHOICE)) {
+                    if (ticks - at > 1200) fail("After reopening the server reports " + ClientLogic.mode);
+                    return;
+                }
+                require(!(mc.screen instanceof ChooserScreen), "The chooser opened in a world that has a difficulty");
+                if (serverReport == null || serverReport.contains("reloading=true")) {
+                    serverReport = null;
+                    if (ticks - at > 1200) fail("No settled server report after reopening");
+                    if (ticks % 10 == 0) askServer();
+                    return;
+                }
+                if (ticks - at < 60) return;
+                PROOF.add("server after reopening: " + serverReport);
+                checkScriptRecipes(serverReport);
+                serverReport = null;
+                frame("05-reopened");
+                next("Reopened the world; difficulty, packs and script recipes still match");
+                step = 9;   // the quest checks belong to the first join; they ran in runs without rejoin
+            }
             default -> {
                 write("PASS");
                 done = true;
@@ -367,12 +412,25 @@ public final class DifficultyValidation {
             int torch = server.getRecipeManager().byKey(ResourceLocation.withDefaultNamespace("torch"))
                     .map(r -> r.value().getResultItem(server.registryAccess()).getCount()).orElse(-1);
             serverReport = "mode=" + mode + " tags=" + tags + " stagesOk=" + stagesOk + " packsOk=" + packsOk
-                    + " packs=" + selected.stream().filter(p -> p.contains("pathbound")).toList() + " torch=" + torch + " reloading=" + ServerLogic.reloadPending();
+                    + " packs=" + selected.stream().filter(p -> p.contains("pathbound")).toList() + " torch=" + torch + " reloading=" + ServerLogic.reloadPending()
+                    + " kjs=" + server.getRecipeManager().getRecipes().stream().map(r -> r.id().toString()).filter(rid -> rid.startsWith("pathbound_test:")).sorted().toList();
         });
     }
 
-    private static Path output() {
-        return Path.of(System.getProperty("pathbound.validationOutput", "build/ci/difficulty"));
+    /**
+     * -Dpathbound.expectRecipes=a:b,c:d must be in the server's recipes, -Dpathbound.expectNoRecipes=... must not
+     * (recipes from PathboundEvents.recipes in the test scripts, namespace pathbound_test).
+     */
+    private static void checkScriptRecipes(String report) {
+        for (String id : System.getProperty("pathbound.expectRecipes", "").split(",")) {
+            if (!id.isBlank()) require(report.contains(id.trim()), "Script recipe " + id + " missing: " + report);
+        }
+        for (String id : System.getProperty("pathbound.expectNoRecipes", "").split(",")) {
+            if (!id.isBlank()) require(!report.contains(id.trim()), "Script recipe " + id + " of another difficulty present: " + report);
+        }
+    }
+
+    private static Path output() {        return Path.of(System.getProperty("pathbound.validationOutput", "build/ci/difficulty"));
     }
 
     private static void frame(String name) {

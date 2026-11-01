@@ -163,6 +163,22 @@ PathboundEvents.register(e => {
 
 Builder methods: `name`, `nameKey`, `description`, `descriptionKey`, `color`, `icon`, `banner`, `order`, `selectable`, `stage`, `clearStages`, `datapack`, `clearDatapacks`, `command`, `frame`.
 
+**Recipes per difficulty** (`kubejs/server_scripts/`). `PathboundEvents.recipes('<difficulty id>', e => ...)` works like `ServerEvents.recipes`, with the same `e`, but runs only in worlds with that difficulty. Recipes of the other difficulties are not added; a world with no difficulty yet gets none of them.
+
+```js
+PathboundEvents.recipes('trial', e => {
+  e.remove({ output: 'minecraft:torch' })
+  e.shaped('2x minecraft:torch', ['C', 'S'], { C: '#minecraft:coals', S: 'minecraft:stick' })
+  e.replaceInput({ output: 'minecraft:anvil' }, 'minecraft:iron_block', 'minecraft:netherite_ingot')
+})
+
+PathboundEvents.recipes('classic', e => {
+  e.shapeless('minecraft:bundle', ['minecraft:leather', 'minecraft:string'])
+})
+```
+
+Pathbound reloads the server data whenever the recipes must change: when a difficulty is chosen or changed (even one without datapacks), and once after a world opens, because a world's first data load runs before the world exists and its difficulty is known. Recipes in plain `ServerEvents.recipes` still apply to every difficulty.
+
 **Server scripts** (`kubejs/server_scripts/`):
 
 ```js
@@ -170,7 +186,7 @@ Builder methods: `name`, `nameKey`, `description`, `descriptionKey`, `color`, `i
 PathboundEvents.beforeChoose(e => {
   if (e.difficulty == 'nightmare' && !e.player.stages.has('veteran')) e.cancel()
 })
-// after the choice (e.player is null when the config or a command set it)
+// after the choice, once its datapacks and recipes are reloaded (e.player is null when the config or a command set it)
 PathboundEvents.afterChoose(e => {
   e.server.tell(`Difficulty: ${e.difficulty}`)
 })
@@ -179,6 +195,7 @@ PathboundEvents.playerJoin(e => console.info(`${e.player.username}: ${e.difficul
 
 // binding
 Pathbound.get(server)             // 'trial' | 'none' | ...
+Pathbound.current()               // the same without a server ('none' during a world's first data load)
 Pathbound.set(server, 'classic')  // like /pathbound mode set; false for an unknown id
 Pathbound.ids()                   // ['classic', 'trial', ...]
 Pathbound.info('trial')           // the difficulty's data
@@ -187,7 +204,7 @@ Pathbound.isChosen(server)
 
 Working test scripts are in `src/clientValidation/kubejs/`.
 
-Java API for other mods: `dev.pathbound.DifficultyApi.get/set/difficulties`, hooks `dev.pathbound.Hooks.register/beforeChoose/afterChoose/playerJoin`.
+Java API for other mods: `dev.pathbound.DifficultyApi.get/currentOrNull/set/difficulties`, hooks `dev.pathbound.Hooks.register/beforeChoose/afterChoose/playerJoin/needsDataReload`.
 
 ## Building and checks
 
@@ -206,10 +223,15 @@ Java API for other mods: `dev.pathbound.DifficultyApi.get/set/difficulties`, hoo
 ```
 
 ```bash
-./gradlew runDifficultyValidation -PvalidationChoice=nightmare -PvalidationProps="pathbound.expectCards=3;pathbound.refuseFirst=hard;pathbound.expectTorch=1;pathbound.expectTag=kjs_after_choose_nightmare"
+./gradlew runDifficultyValidation -PvalidationChoice=nightmare -PvalidationProps="pathbound.expectCards=3;pathbound.refuseFirst=hard;pathbound.expectTorch=1;pathbound.expectTag=kjs_after_choose_nightmare;pathbound.expectRecipes=pathbound_test:nightmare_diamond;pathbound.expectNoRecipes=pathbound_test:normal_coal;pathbound.rejoin=true"
 ```
 
-- GameTests: saved data, config parsing, stages, a datapack from `config/pathbound/datapacks` (`src/gameTest/config`), a third difficulty (built-in datapack, stage, command), `defaultMode`, commands.
+```bash
+./gradlew runDifficultyValidation -PvalidationChoice=normal -PwithScripts -PvalidationProps="pathbound.expectCards=3;pathbound.expectTorch=4;pathbound.expectTag=kjs_after_choose_normal;pathbound.expectRecipes=pathbound_test:normal_coal;pathbound.expectNoRecipes=pathbound_test:nightmare_diamond;pathbound.rejoin=true"
+```
+
+- GameTests: saved data, config parsing, stages, a datapack from `config/pathbound/datapacks` (`src/gameTest/config`), a third difficulty (built-in datapack, stage, command), `defaultMode`, commands, a data reload asked by `Hooks.needsDataReload`.
+- Script recipes: the two runs above check `PathboundEvents.recipes` after the choice (with and without a datapack change) and again after leaving and reopening the world (`pathbound.rejoin=true`). `pathbound.skipQuests=true` skips the modpack's quest checks.
 - The client check runs the mod against a real modpack (Thaumaturge Renaissance): its `config/pathbound` (`-PpackConfig=...`), its chooser theme (`-PpackAssets=...`), its FTB quests (`-PquestSource=...`), and FTB Quests and KubeJS from its `mods` folder (`-PpackMods=...` or `packMods=...` in an untracked `local.properties`; `-PnoPackMods` runs without them). A fresh flat world, a choice through the real screen, checks of the server, recipes and quests. Frames and `proof.txt` go to `build/ci/difficulty/<name>/`.
 - The server checks (`runServerCheck`, `runServerCheckKubejs`, `runServerCheckDefault`) need an `eula.txt` in their run folder.
 

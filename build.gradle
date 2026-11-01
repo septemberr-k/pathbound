@@ -137,9 +137,9 @@ def questBook = tasks.register('prepareQuestBook', Sync) {
     from('src/clientValidation/quests')
 }
 // kubejs/ of the validation run: the modpack's chooser theme (-PpackAssets=..., its kubejs/assets) and the test frame;
-// the test scripts (a third difficulty, a refused hard) only for -PvalidationChoice=nightmare.
+// the test scripts (a third difficulty, a refused hard, recipes per difficulty) for -PvalidationChoice=nightmare or -PwithScripts.
 def packAssets = file(providers.gradleProperty('packAssets').getOrElse('../thaumaturge-quests/pathbound_pack/kubejs/assets'))
-def withScripts = providers.gradleProperty('validationChoice').getOrElse('hard') == 'nightmare'
+def withScripts = providers.gradleProperty('validationChoice').getOrElse('hard') == 'nightmare' || providers.gradleProperty('withScripts').isPresent()
 def kubejsDir = tasks.register('prepareKubejs', Sync) {
     into 'run/difficulty-validation/kubejs'
     from(packAssets) { into 'assets' }

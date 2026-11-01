@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0
+
+- KubeJS recipes per difficulty: `PathboundEvents.recipes('<difficulty id>', e => ...)` takes the same `e` as `ServerEvents.recipes` and applies only in worlds with that difficulty.
+- Pathbound reloads the server data when script recipes depend on the difficulty: on a choice or change (also for a difficulty without datapacks) and once after a world opens.
+- `PathboundEvents.afterChoose` now fires after that reload, together with the difficulty's commands.
+- Binding `Pathbound.current()`: the world's difficulty without a server at hand. Java: `DifficultyApi.currentOrNull()`, hook `Hooks.needsDataReload`.
+
 ## 1.0.0
 
 First release.

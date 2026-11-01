@@ -2,6 +2,7 @@ package dev.pathbound;
 
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -21,6 +22,11 @@ public final class Hooks {
     /** A player joined a world that has a difficulty. */
     public static PlayerJoin playerJoin = (player, difficulty) -> {
     };
+    /**
+     * Whether the server data must be reloaded for this difficulty id even when its datapacks did not change, e.g. because
+     * script recipes depend on it (KubeJS: PathboundEvents.recipes). Asked on a choice and when a world starts.
+     */
+    public static Predicate<String> needsDataReload = mode -> false;
 
     private Hooks() {
     }

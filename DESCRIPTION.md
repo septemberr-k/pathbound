@@ -16,6 +16,7 @@ Everything is data. You can rename the difficulties, add your own, give them rec
 - **Datapacks per difficulty.** A difficulty can switch datapacks on: different recipes, loot or worldgen data for Trial worlds only. Packs can ship them in `config/pathbound/datapacks/`, no extra jar needed.
 - **Commands on choice.** Run any server commands once when a difficulty is picked (gamerules, `/difficulty`, scoreboard, functions).
 - **Fully restylable screen.** Card size and layout, colours, background, frame sprites (nine-slice, animated), item or texture icons, drawn title images per language, sounds and animations, all from a resource pack.
+- **KubeJS recipes per difficulty (optional).** `PathboundEvents.recipes('trial', e => ...)` adds, removes or replaces recipes only in worlds with that difficulty.
 - **KubeJS support (optional).** Add or change difficulties from scripts, refuse a choice, react after it, read and set the difficulty.
 - **Server friendly.** `defaultMode` in the server config picks a difficulty for new worlds automatically and skips the screen.
 - **Any language.** Names, descriptions and title images can be set per language (`en_us`, `de_de`, `pt_br`...), and the screen texts come from ordinary lang files, so you can translate everything yourself.
