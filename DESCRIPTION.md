@@ -16,7 +16,7 @@ Everything is data. You can rename the difficulties, add your own, give them rec
 - **Datapacks per difficulty.** A difficulty can switch datapacks on: different recipes, loot or worldgen data for Trial worlds only. Packs can ship them in `config/pathbound/datapacks/`, no extra jar needed.
 - **Commands on choice.** Run any server commands once when a difficulty is picked (gamerules, `/difficulty`, scoreboard, functions).
 - **Fully restylable screen.** Card size and layout, colours, background, frame sprites (nine-slice, animated), item or texture icons, drawn title images per language, sounds and animations, all from a resource pack.
-- **KubeJS recipes per difficulty (optional).** `PathboundEvents.recipes('trial', e => ...)` adds, removes or replaces recipes only in worlds with that difficulty.
+- **KubeJS recipes per difficulty (optional).** Write `PathboundEvents.recipes('trial', e => ...)` instead of `ServerEvents.recipes` and those recipes exist only in Trial worlds: add, remove or replace anything, per difficulty.
 - **KubeJS support (optional).** Add or change difficulties from scripts, refuse a choice, react after it, read and set the difficulty.
 - **Server friendly.** `defaultMode` in the server config picks a difficulty for new worlds automatically and skips the screen.
 - **Any language.** Names, descriptions and title images can be set per language (`en_us`, `de_de`, `pt_br`...), and the screen texts come from ordinary lang files, so you can translate everything yourself.
@@ -61,21 +61,37 @@ All of it is config and resources. The pack has no code of its own for this.
 
 **3. Add or remove a difficulty.** Copy an entry and give it a new `id` (lowercase letters, digits, `_`). Delete an entry to remove it. `order` sets the card order. `"selectable": false` hides a card but keeps the difficulty for commands.
 
-**4. Give it recipes or loot.** Put a normal datapack (a folder with `pack.mcmeta`, or a `.zip`) into `config/pathbound/datapacks/` and list it as `"config:<name>"` in `datapacks`. Pathbound enables it only in worlds with that difficulty.
+**4. Give it recipes or loot with a datapack.** Put a normal datapack (a folder with `pack.mcmeta`, or a `.zip`) into `config/pathbound/datapacks/` and list it as `"config:<name>"` in `datapacks`. Pathbound enables it only in worlds with that difficulty.
 
-**5. Hook up quests and scripts.** Use the difficulty's stage, for example a stage task `mypack_trial` in FTB Quests (it reads stages through KubeJS and FTB XMod Compat), or `player.stages.has('mypack_trial')` in KubeJS.
+**5. Or give it recipes with KubeJS.** In any file in `kubejs/server_scripts/`, use `PathboundEvents.recipes` instead of `ServerEvents.recipes`. Inside it works exactly the same, but only in worlds with that difficulty:
 
-**6. Run commands.** Add them to `commands`. They run once, as the server, right after the datapacks reload.
+```js
+PathboundEvents.recipes('trial', e => {
+  e.remove({ output: 'minecraft:torch' })
+  e.shaped('2x minecraft:torch', ['C', 'S'], { C: '#minecraft:coals', S: 'minecraft:stick' })
+  e.replaceInput({ output: 'minecraft:anvil' }, 'minecraft:iron_block', 'minecraft:netherite_ingot')
+})
 
-**7. Restyle the screen (optional).** In a resource pack (or `kubejs/assets/`) add:
+PathboundEvents.recipes('classic', e => {
+  e.shapeless('minecraft:bundle', ['minecraft:leather', 'minecraft:string'])
+})
+```
+
+Pathbound reloads the recipes by itself when a difficulty is chosen and when a world opens. Recipes in plain `ServerEvents.recipes` keep working for every difficulty.
+
+**6. Hook up quests and scripts.** Use the difficulty's stage, for example a stage task `mypack_trial` in FTB Quests (it reads stages through KubeJS and FTB XMod Compat), or `player.stages.has('mypack_trial')` in KubeJS.
+
+**7. Run commands.** Add them to `commands`. They run once, as the server, right after the datapacks and recipes reload.
+
+**8. Restyle the screen (optional).** In a resource pack (or `kubejs/assets/`) add:
 
 - `assets/pathbound/chooser/layout.json` for card size, padding, colours, background, sounds and animations;
 - frame sprites `assets/<yourpack>/textures/gui/sprites/<path>.png` (plus `_hovered` and `_selected`), then set `"frame": "<yourpack>:<path>"` on a difficulty;
 - `"banner"` on a difficulty for a drawn title image, one per language if you like.
 
-**8. Apply and test.** Restart the world (or the server), then run `/pathbound choose` to see the screen again. `/pathbound list` shows what was loaded. For servers, set `defaultMode = "trial"` in `config/pathbound-server.toml` to skip the screen.
+**9. Apply and test.** Restart the world (or the server), then run `/pathbound choose` to see the screen again. `/pathbound list` shows what was loaded. For servers, set `defaultMode = "trial"` in `config/pathbound-server.toml` to skip the screen.
 
-The full reference (every field, layout keys, animations, KubeJS events) is in the README.
+The full reference (every field, layout keys, animations, KubeJS events) is in the README on [GitHub](https://github.com/septemberr-k/pathbound).
 
 ---
 
