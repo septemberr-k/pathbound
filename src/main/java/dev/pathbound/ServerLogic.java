@@ -18,6 +18,7 @@ import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.player.PermissionsChangedEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
@@ -33,10 +34,24 @@ public final class ServerLogic {
     private ServerLogic() {
     }
 
-    /** The host of a singleplayer / LAN world, or an operator on a dedicated server. */
+    /** The host of a singleplayer / LAN world, or a player with choosePermission (operators by default) on a server. */
     static boolean canChoose(ServerPlayer player) {
         MinecraftServer server = player.getServer();
-        return server != null && (server.isSingleplayerOwner(player.getGameProfile()) || player.hasPermissions(2));
+        return server != null && (server.isSingleplayerOwner(player.getGameProfile()) || player.hasPermissions(Config.choosePermission()));
+    }
+
+    /**
+     * /op and /deop change who may choose: tell that player at once, so the chooser opens without a rejoin. The event
+     * fires before the change, so the state goes out on the next tick.
+     */
+    @SubscribeEvent
+    public static void onPermissionsChanged(PermissionsChangedEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        MinecraftServer server = player.server;
+        server.execute(() -> {
+            if (player.isRemoved() || DifficultyData.get(server).chosen()) return;
+            sendState(player, Difficulty.NONE);
+        });
     }
 
     @SubscribeEvent
@@ -65,6 +80,12 @@ public final class ServerLogic {
         }
         if (!data.chosen() && Difficulties.all().stream().noneMatch(Difficulty::selectable)) {
             LOG.warn("No selectable difficulty and no defaultMode: nobody can choose one; set one with /pathbound mode set <id>");
+        }
+        // On a dedicated server nobody is an operator by default, and then nobody can choose: say how to proceed.
+        if (!data.chosen() && server.isDedicatedServer() && Config.choosePermission() > 0) {
+            LOG.warn("This world has no difficulty yet. A player with permission level {} chooses it on join (\"op <name>\" in"
+                    + " this console), or set it now with \"pathbound mode set <id>\" ({}), or set defaultMode in"
+                    + " config/pathbound-server.toml (choosePermission = 0 lets any player choose)", Config.choosePermission(), ids());
         }
         if (data.chosen() && Difficulties.get(data.mode()) == null) {
             LOG.warn("This world's difficulty '{}' is not defined any more {}; its stages and datapacks are not applied", data.mode(), ids());

@@ -47,8 +47,9 @@ public final class ClientLogic {
         if (!pending) {
             submitted = false;
             if (mc.screen instanceof ChooserScreen) mc.setScreen(null);
-        } else if (!(mc.screen instanceof ChooserScreen)) {
-            // Also after a refused choice: the server answers with "none" and the chooser comes back.
+        } else if (!(mc.screen instanceof ChooserScreen open) || open.canChoose() != canChoose) {
+            // Also after a refused choice (the server answers with "none" and the chooser comes back), and after /op or
+            // /deop: the waiting notice turns into the chooser, or back.
             submitted = false;
             mc.setScreen(new ChooserScreen(canChoose));
         }

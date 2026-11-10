@@ -102,6 +102,15 @@ public final class DifficultyValidation {
                     ResourceLocation frame = chooser.frameOf(d.id());
                     PROOF.add("card " + d.id() + ": " + (frame == null ? "plain fallback frame" : "sprite " + frame));
                 }
+                if (Boolean.getBoolean("pathbound.testOpSwitch")) {
+                    // What /deop and /op send: the chooser turns into the waiting notice and back, without a rejoin.
+                    ClientLogic.onModeState(new ModeStatePayload(Difficulty.NONE, false));
+                    require(mc.screen instanceof ChooserScreen c && !c.canChoose(), "Losing the permission did not show the waiting notice: " + mc.screen);
+                    frame("01-waiting");
+                    ClientLogic.onModeState(new ModeStatePayload(Difficulty.NONE, true));
+                    require(mc.screen instanceof ChooserScreen c && c.canChoose(), "Gaining the permission did not open the chooser: " + mc.screen);
+                    PROOF.add("permission change: waiting notice and chooser swap without a rejoin");
+                }
                 askServer();
                 frame("01-chooser");
                 // Escape must not dismiss the chooser.

@@ -2,6 +2,8 @@
   "pathbound.title": "Choose your path",
   "pathbound.subtitle": "This choice is made once per world and cannot be changed later.",
   "pathbound.waiting": "The world host is choosing the difficulty...",
+  "pathbound.waiting.server": "Waiting for an operator to choose the world difficulty...",
+  "pathbound.waiting.hint": "Server admin: run \"op <name>\" in the server console and the chooser opens for that player, or set the difficulty right away with \"pathbound mode set <id>\".",
   "pathbound.mode.none": "Not chosen",
   "pathbound.mode.classic": "Classic",
   "pathbound.mode.trial": "Trial",

@@ -111,6 +111,11 @@ public final class ChooserScreen extends Screen {
         }
     }
 
+    /** Whether this is the chooser itself rather than the waiting notice. */
+    boolean canChoose() {
+        return canChoose;
+    }
+
     /** The host must choose; anyone else only waits and may close the notice and play on. */
     @Override
     public boolean shouldCloseOnEsc() {
@@ -150,7 +155,16 @@ public final class ChooserScreen extends Screen {
         int titleY = headerY - (int) Math.round((1 - fade) * 6);
         g.drawCenteredString(font, layout.title().resolve(lang()), width / 2, titleY, Anim.withAlpha(layout.titleColor(), fade));
         if (!canChoose) {
-            g.drawCenteredString(font, Component.translatable("pathbound.waiting"), width / 2, height / 2, Anim.withAlpha(0xFFD0D0D0, fade));
+            // On a dedicated server there is no host, only operators and the console: say how to get past this.
+            boolean server = minecraft.getSingleplayerServer() == null && minecraft.getCurrentServer() != null && !minecraft.getCurrentServer().isLan();
+            g.drawCenteredString(font, Component.translatable(server ? "pathbound.waiting.server" : "pathbound.waiting"), width / 2, height / 2, Anim.withAlpha(0xFFD0D0D0, fade));
+            if (server) {
+                int y = height / 2 + LINE + 4;
+                for (FormattedCharSequence line : font.split(Component.translatable("pathbound.waiting.hint"), Math.max(100, width - 40))) {
+                    g.drawCenteredString(font, line, width / 2, y, Anim.withAlpha(0xFF9A9AA6, fade));
+                    y += LINE;
+                }
+            }
             return;
         }
         int y = titleY + LINE + 4;

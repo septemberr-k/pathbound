@@ -6,7 +6,7 @@ https://www.curseforge.com/minecraft/mc-mods/pathbound-world-difficulty
 
 ## How it works
 
-- While the world has no difficulty (`none`), the host (or an operator on a server) sees the chooser. Esc does not close it. Other players see "The world host is choosing the difficulty..." and can close that notice.
+- While the world has no difficulty (`none`), the host (or an operator on a server, see `choosePermission`) sees the chooser. Esc does not close it. Other players see a waiting notice and can close it; on a server it also tells the admin how to proceed.
 - The choice is stored in the world (`data/pathbound.dat`). Once a difficulty is chosen, the mod:
   - grants the players its stages (player tags, which are also KubeJS and FTB Quests stages) and removes the stages of the other difficulties;
   - enables its datapacks and disables those of the other difficulties (with a data reload);
@@ -65,7 +65,12 @@ The file is written from the jar's template on the first world start and read on
 
 **Difficulty datapacks without a mod of your own.** Put a datapack (a folder with `pack.mcmeta`, or a `.zip`) into `config/pathbound/datapacks/` and list it as `"config:name"`. Such packs are never enabled on their own: Pathbound turns them on only in worlds with that difficulty.
 
-**Server.** `config/pathbound-server.toml`: `defaultMode = "none"` or a difficulty id. That difficulty is applied at server start to a world without one, and the chooser is not shown.
+**Server.** `config/pathbound-server.toml`:
+
+- `defaultMode = "none"` or a difficulty id (any case). That difficulty is applied at server start to a world without one, and the chooser is not shown. The file can be created by hand before the first start.
+- `choosePermission = 2`: the permission level needed to choose on a server. 2 = operators (default); 0 = any player, the first one to choose decides. The owner of a singleplayer or LAN world can always choose.
+
+A fresh dedicated server has no operators, so with the defaults nobody can choose: run `op <name>` in the server console (the chooser opens for that player at once, no rejoin needed), set the difficulty from the console with `pathbound mode set <id>`, or use `defaultMode` or `choosePermission`. The server logs this hint at start while the world has no difficulty, and players on a server see it on the waiting notice.
 
 ## Look of the screen
 

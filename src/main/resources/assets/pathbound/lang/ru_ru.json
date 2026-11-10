@@ -2,6 +2,8 @@
   "pathbound.title": "Выберите путь",
   "pathbound.subtitle": "Выбор делается один раз для этого мира, изменить его потом нельзя.",
   "pathbound.waiting": "Хозяин мира выбирает сложность...",
+  "pathbound.waiting.server": "Ждём, пока оператор выберет сложность мира...",
+  "pathbound.waiting.hint": "Администратору сервера: выполните в консоли сервера «op <ник>», и у этого игрока откроется выбор, или задайте сложность сразу командой «pathbound mode set <id>».",
   "pathbound.mode.none": "Не выбрана",
   "pathbound.mode.classic": "Классика",
   "pathbound.mode.trial": "Испытание",

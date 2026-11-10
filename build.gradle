@@ -91,9 +91,13 @@ tasks.named('build') { dependsOn 'gameTestClasses', 'clientValidationClasses' }
 def localProps = new Properties()
 if (file('local.properties').isFile()) file('local.properties').withInputStream { localProps.load(it) }
 def packMods = file(providers.gradleProperty('packMods').getOrElse(localProps.getProperty('packMods', 'packmods')))
-def packJars = ['architectury-13.0.11-neoforge', 'ftb-library-neoforge-2101.1.39', 'ftb-teams-neoforge-2101.1.11',
-                'ftb-quests-neoforge-2101.1.37', 'ftb-xmod-compat-neoforge-21.1.14',
-                'kubejs-neoforge-2101.7.2-build.377', 'rhino-2101.2.7-build.85'].collect { new File(packMods, it + '.jar') }
+// Matched by name, any version: the newest jar of each in that folder (a missing one is a non-existent file).
+def packJar = { String prefix ->
+    def found = (packMods.listFiles() ?: []).findAll { it.name.startsWith(prefix) && it.name.endsWith('.jar') }.sort { it.name }
+    found ? found.last() : new File(packMods, prefix + '.jar')
+}
+def packJars = ['architectury-', 'ftb-library-neoforge-', 'ftb-teams-neoforge-', 'ftb-quests-neoforge-', 'ftb-xmod-compat-neoforge-',
+                'kubejs-neoforge-', 'rhino-'].collect(packJar)
 // The KubeJS module (compat/kubejs) compiles against KubeJS, Rhino and Architectury; they never ship in the jar.
 def kubeJars = packJars.findAll { it.name.startsWith('kubejs') || it.name.startsWith('rhino') || it.name.startsWith('architectury') }
 if (kubeJars.every { it.isFile() }) {

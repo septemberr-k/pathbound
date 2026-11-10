@@ -82,6 +82,24 @@ public final class DifficultyGameTests {
         h.succeed();
     }
 
+    /** choosePermission decides who may choose on a server: operators by default, anyone at 0. */
+    @GameTest(template = "empty", batch = "permission")
+    public static void choosePermissionDecidesWhoMayChoose(GameTestHelper h) {
+        MinecraftServer server = h.getLevel().getServer();
+        ServerPlayer player = h.makeMockServerPlayerInLevel();
+        try {
+            h.assertTrue(Config.choosePermission() == 2, "Operators choose by default");
+            h.assertTrue(!ServerLogic.canChoose(player), "A player without permission may not choose");
+            Config.CHOOSE_PERMISSION.set(0);
+            h.assertTrue(ServerLogic.canChoose(player), "choosePermission = 0 lets any player choose");
+        } finally {
+            Config.CHOOSE_PERMISSION.set(2);
+            server.getPlayerList().remove(player);
+            player.discard();
+        }
+        h.succeed();
+    }
+
     /** Script recipes (Hooks.needsDataReload) get a data reload on a choice even when no datapack changes. */
     @GameTest(template = "empty", batch = "scriptReload", timeoutTicks = 400)
     public static void aDifficultyWithScriptRecipesReloadsData(GameTestHelper h) {

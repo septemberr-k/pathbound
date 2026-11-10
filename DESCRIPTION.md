@@ -18,7 +18,7 @@ Everything is data. You can rename the difficulties, add your own, give them rec
 - **Fully restylable screen.** Card size and layout, colours, background, frame sprites (nine-slice, animated), item or texture icons, drawn title images per language, sounds and animations, all from a resource pack.
 - **KubeJS recipes per difficulty (optional).** Write `PathboundEvents.recipes('trial', e => ...)` instead of `ServerEvents.recipes` and those recipes exist only in Trial worlds: add, remove or replace anything, per difficulty.
 - **KubeJS support (optional).** Add or change difficulties from scripts, refuse a choice, react after it, read and set the difficulty.
-- **Server friendly.** `defaultMode` in the server config picks a difficulty for new worlds automatically and skips the screen.
+- **Server friendly.** `defaultMode` in `config/pathbound-server.toml` picks a difficulty for new worlds and skips the screen; `choosePermission` sets who may choose (operators by default, `0` = anyone). Giving a player `/op` opens the chooser for them right away.
 - **Any language.** Names, descriptions and title images can be set per language (`en_us`, `de_de`, `pt_br`...), and the screen texts come from ordinary lang files, so you can translate everything yourself.
 
 Commands: `/pathbound mode`, `/pathbound mode set <id|none>`, `/pathbound choose` (show the screen again), `/pathbound list`. Changing the difficulty needs operator rights or the singleplayer world owner (cheats not required).

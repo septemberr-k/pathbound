@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.1
+
+- Dedicated servers: a fresh server has no operators, so nobody could choose and everyone saw "waiting for the host". Now:
+  - `/op <name>` opens the chooser for that player at once (and `/deop` turns it back into the waiting notice), no rejoin needed;
+  - players on a server see "Waiting for an operator..." with a hint for the admin (`op <name>`, or `pathbound mode set <id>` in the console);
+  - the server console logs the same hint at start while the world has no difficulty.
+- New server option `choosePermission` in `config/pathbound-server.toml`: the permission level needed to choose (2 = operators, default; 0 = any player).
+- `defaultMode` accepts ids in any case.
+- Build: the dev runs find the FTB / KubeJS jars by name, any version.
+
 ## 1.1.0
 
 - KubeJS recipes per difficulty: `PathboundEvents.recipes('<difficulty id>', e => ...)` takes the same `e` as `ServerEvents.recipes` and applies only in worlds with that difficulty.
