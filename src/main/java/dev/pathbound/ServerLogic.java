@@ -42,16 +42,14 @@ public final class ServerLogic {
 
     /**
      * /op and /deop change who may choose: tell that player at once, so the chooser opens without a rejoin. The event
-     * fires before the change, so the state goes out on the next tick.
+     * fires before the new level is applied (and server.execute would run right away on the server thread), so the
+     * decision uses the event's new level.
      */
     @SubscribeEvent
     public static void onPermissionsChanged(PermissionsChangedEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) return;
-        MinecraftServer server = player.server;
-        server.execute(() -> {
-            if (player.isRemoved() || DifficultyData.get(server).chosen()) return;
-            sendState(player, Difficulty.NONE);
-        });
+        if (!(event.getEntity() instanceof ServerPlayer player) || DifficultyData.get(player.server).chosen()) return;
+        boolean may = player.server.isSingleplayerOwner(player.getGameProfile()) || event.getNewLevel() >= Config.choosePermission();
+        sendState(player, Difficulty.NONE, may);
     }
 
     @SubscribeEvent
@@ -231,11 +229,15 @@ public final class ServerLogic {
     }
 
     static void sendState(ServerPlayer player, String mode) {
+        sendState(player, mode, canChoose(player));
+    }
+
+    private static void sendState(ServerPlayer player, String mode, boolean mayChoose) {
         // Fake and test players have no mod channel; sending to them throws and takes the server down.
         if (!player.connection.hasChannel(ModeStatePayload.TYPE)) return;
         // With nothing selectable the host could never leave the chooser; show the closable waiting notice instead.
         boolean any = Difficulties.all().stream().anyMatch(Difficulty::selectable);
-        PacketDistributor.sendToPlayer(player, new ModeStatePayload(mode, canChoose(player) && any));
+        PacketDistributor.sendToPlayer(player, new ModeStatePayload(mode, mayChoose && any));
     }
 
     /**

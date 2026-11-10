@@ -9,6 +9,7 @@
 - New server option `choosePermission` in `config/pathbound-server.toml`: the permission level needed to choose (2 = operators, default; 0 = any player).
 - `defaultMode` accepts ids in any case.
 - Build: the dev runs find the FTB / KubeJS jars by name, any version.
+- Checked on a real dedicated server (`runServerTest` + a client joining it): waiting notice, `op` opening the chooser, the choice, stages, datapack and KubeJS recipes.
 
 ## 1.1.0
 

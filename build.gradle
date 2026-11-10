@@ -66,6 +66,16 @@ neoForge {
             systemProperty 'pathbound.serverSmoke', 'true'
             systemProperty 'pathbound.smokeExpectMode', 'trial'
         }
+        // The network check, server side (ServerTestHook): a fresh offline-mode world on port 25599 with the default
+        // difficulties and KubeJS. Start it, then: runDifficultyValidation -PvalidationChoice=trial
+        //   -PvalidationProps="pathbound.connect=localhost:25599;..." It stops when the test player leaves.
+        serverTest {
+            server()
+            sourceSet = sourceSets.clientValidation   // KubeJS and FTB jars, like the client
+            programArgument '--nogui'
+            gameDirectory = project.file('run/server-test')
+            systemProperty 'pathbound.serverTest', 'true'
+        }
         configureEach { logLevel = org.slf4j.event.Level.INFO }
     }
     mods {
@@ -152,6 +162,37 @@ def kubejsDir = tasks.register('prepareKubejs', Sync) {
     preserve { include '**'; exclude 'assets/**', 'startup_scripts/**', 'server_scripts/**' }
 }
 tasks.matching { it.name == 'runDifficultyValidation' }.configureEach { dependsOn validationConfig, questBook, kubejsDir }
+
+// serverTest: a fresh world, offline mode (the dev client has no Mojang account), default server config, the GameTest
+// difficulties (trial enables config:test_trial) and a KubeJS recipe for trial. eula.txt is the user's to write.
+def serverTestDir = file('run/server-test')
+def serverTestConfig = file('src/gameTest/config')
+def prepareServerTest = tasks.register('prepareServerTest') {
+    outputs.upToDateWhen { false }
+    doLast {
+        if (!new File(serverTestDir, 'eula.txt').text.contains('eula=true')) throw new GradleException('run/server-test/eula.txt must say eula=true')
+        ['world', 'kubejs/server_scripts', 'config/pathbound'].each { new File(serverTestDir, it).deleteDir() }
+        new File(serverTestDir, 'config/pathbound-server.toml').delete()
+        new File(serverTestDir, 'server-proof.txt').delete()
+        new File(serverTestDir, 'ops.json').text = '[]'
+        new File(serverTestDir, 'server.properties').text = ['online-mode=false', 'server-port=25599', 'level-type=minecraft\\:flat',
+                'difficulty=peaceful', 'spawn-protection=0', 'spawn-monsters=false', 'enforce-secure-profile=false',
+                'motd=Pathbound test'].join(System.lineSeparator()) + System.lineSeparator()
+        def from = serverTestConfig.toPath(), to = new File(serverTestDir, 'config/pathbound').toPath()
+        java.nio.file.Files.walk(from).each { p ->
+            def target = to.resolve(from.relativize(p).toString())
+            if (java.nio.file.Files.isDirectory(p)) java.nio.file.Files.createDirectories(target)
+            else java.nio.file.Files.copy(p, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
+        def script = new File(serverTestDir, 'kubejs/server_scripts/pathbound_server_test.js')
+        script.parentFile.mkdirs()
+        script.text = "// runServerTest only: a recipe that exists only in trial worlds\n" +
+                "PathboundEvents.recipes('trial', e => {\n" +
+                "  e.shapeless('minecraft:gold_ingot', ['minecraft:dirt', 'minecraft:dirt', 'minecraft:dirt']).id('pathbound_test:trial_gold')\n" +
+                "})\n"
+    }
+}
+tasks.matching { it.name == 'runServerTest' }.configureEach { dependsOn prepareServerTest }
 
 // serverCheckDefault: a fresh world and defaultMode = "trial" in the server config.
 def serverDefaultDir = file('run/server-check-default')

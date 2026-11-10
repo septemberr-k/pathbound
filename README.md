@@ -238,7 +238,14 @@ Java API for other mods: `dev.pathbound.DifficultyApi.get/currentOrNull/set/diff
 - GameTests: saved data, config parsing, stages, a datapack from `config/pathbound/datapacks` (`src/gameTest/config`), a third difficulty (built-in datapack, stage, command), `defaultMode`, commands, a data reload asked by `Hooks.needsDataReload`.
 - Script recipes: the two runs above check `PathboundEvents.recipes` after the choice (with and without a datapack change) and again after leaving and reopening the world (`pathbound.rejoin=true`). `pathbound.skipQuests=true` skips the modpack's quest checks.
 - The client check runs the mod against a real modpack (Thaumaturge Renaissance): its `config/pathbound` (`-PpackConfig=...`), its chooser theme (`-PpackAssets=...`), its FTB quests (`-PquestSource=...`), and FTB Quests and KubeJS from its `mods` folder (`-PpackMods=...` or `packMods=...` in an untracked `local.properties`; `-PnoPackMods` runs without them). A fresh flat world, a choice through the real screen, checks of the server, recipes and quests. Frames and `proof.txt` go to `build/ci/difficulty/<name>/`.
-- The server checks (`runServerCheck`, `runServerCheckKubejs`, `runServerCheckDefault`) need an `eula.txt` in their run folder.
+- The server checks (`runServerCheck`, `runServerCheckKubejs`, `runServerCheckDefault`, `runServerTest`) need an `eula.txt` in their run folder.
+- Network check on a real dedicated server: start `./gradlew runServerTest` (a fresh offline-mode world on port 25599, default difficulties, a KubeJS recipe for trial), then run the client against it:
+
+  ```bash
+  ./gradlew runDifficultyValidation -PvalidationChoice=trial -PvalidationOut=server -PvalidationProps="pathbound.connect=localhost:25599;pathbound.expectTorch=2;pathbound.expectRecipes=pathbound_test:trial_gold"
+  ```
+
+  The client joins without permissions and must see the server's waiting notice; the server then runs `op` for it and the chooser must open without a rejoin; after the choice the server's stages, datapack and recipes and the client's recipes are checked. The server stops when the client leaves and writes `run/server-test/server-proof.txt`.
 
 The project icon is `branding/icon.png`. The mod list logo (`pathbound_logo.png` in the jar) and the logo above are drawn pixel art in `branding/`.
 

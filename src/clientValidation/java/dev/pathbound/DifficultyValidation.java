@@ -44,6 +44,9 @@ import org.slf4j.Logger;
 public final class DifficultyValidation {
     private static final Logger LOG = LogUtils.getLogger();
     private static final String CHOICE = System.getProperty("pathbound.difficultyValidation");
+    /** -Dpathbound.connect=host:port: join that dedicated server (runServerTest) instead of creating a world. */
+    private static final String CONNECT = System.getProperty("pathbound.connect", "");
+    private static int chooserSeen = -1;
     /** The world created for this run, reopened by -Dpathbound.rejoin=true. */
     private static String levelId;
     private static final String REFUSE = System.getProperty("pathbound.refuseFirst", "");
@@ -81,6 +84,14 @@ public final class DifficultyValidation {
                 if (!(mc.screen instanceof TitleScreen) || mc.getOverlay() != null) return;
                 mc.options.guiScale().set(2);
                 mc.resizeDisplay();
+                if (!CONNECT.isEmpty()) {
+                    var address = net.minecraft.client.multiplayer.resolver.ServerAddress.parseString(CONNECT);
+                    net.minecraft.client.gui.screens.ConnectScreen.startConnecting(mc.screen, mc, address,
+                            new net.minecraft.client.multiplayer.ServerData("Pathbound test", CONNECT, net.minecraft.client.multiplayer.ServerData.Type.OTHER), false, null);
+                    next("Connecting to the dedicated server at " + CONNECT);
+                    step = 40;
+                    return;
+                }
                 var rules = new GameRules();
                 rules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
                 rules.getRule(GameRules.RULE_DAYLIGHT).set(false, null);
@@ -368,6 +379,66 @@ public final class DifficultyValidation {
                 frame("05-reopened");
                 next("Reopened the world; difficulty, packs and script recipes still match");
                 step = 9;   // the quest checks belong to the first join; they ran in runs without rejoin
+            }
+            case 40 -> {
+                // Joined without permissions: the waiting notice for servers, not the chooser.
+                if (mc.player == null || mc.getOverlay() != null || !(mc.screen instanceof ChooserScreen waiting)) {
+                    if (ticks - at > 1200) fail("No waiting notice after joining the server; screen " + mc.screen);
+                    return;
+                }
+                if (ticks - at < 60) return;
+                require(!waiting.canChoose(), "A player without permissions got the chooser on a dedicated server");
+                require(mc.getSingleplayerServer() == null && mc.getCurrentServer() != null && !mc.getCurrentServer().isLan(), "Not on a dedicated server");
+                require(ClientLogic.mode.equals(Difficulty.NONE), "The server reported " + ClientLogic.mode + " for a new world");
+                frame("server-01-waiting");
+                next("Joined the server without permissions: the waiting notice for servers is shown");
+            }
+            case 41 -> {
+                // The server runs "op" for this player; the chooser must open without a rejoin.
+                if (!(mc.screen instanceof ChooserScreen chooser) || !chooser.canChoose()) {
+                    if (ticks - at > 1200) fail("The chooser did not open after op; screen " + mc.screen);
+                    return;
+                }
+                if (chooserSeen < 0) chooserSeen = ticks;
+                if (ticks - chooserSeen < 40) return;   // let the intro finish
+                require(chooser.cardCount() == Integer.getInteger("pathbound.expectCards", 2), "Chooser shows " + chooser.cardCount() + " cards");
+                frame("server-02-chooser");
+                int[] c = chooser.cardCenter(CHOICE);
+                require(c != null, "No card for " + CHOICE);
+                require(chooser.mouseClicked(c[0], c[1], 0), "Click on the " + CHOICE + " card was not handled");
+                next("After op the chooser opened without a rejoin; clicked " + CHOICE);
+            }
+            case 42 -> {
+                if (!(mc.screen instanceof ConfirmScreen)) {
+                    if (ticks - at > 100) fail("No ConfirmScreen after clicking " + CHOICE + "; screen " + mc.screen);
+                    return;
+                }
+                if (ticks - at < 20) return;
+                Button yes = mc.screen.children().stream().filter(b -> b instanceof Button bb && bb.getMessage().equals(CommonComponents.GUI_YES))
+                        .map(Button.class::cast).findFirst().orElseThrow(() -> new IllegalStateException("No Yes button on " + mc.screen));
+                yes.onPress();
+                next("Pressed Yes for " + CHOICE);
+            }
+            case 43 -> {
+                // The server answers, reloads its data and syncs the recipes.
+                int expected = Integer.getInteger("pathbound.expectTorch", 4);
+                if (!ClientLogic.mode.equals(CHOICE) || clientTorchCount(mc) != expected) {
+                    if (ticks - at > 1200) fail("After the choice: mode " + ClientLogic.mode + ", torch " + clientTorchCount(mc) + ", expected " + CHOICE + " / " + expected);
+                    return;
+                }
+                if (ticks - at < 60) return;
+                require(mc.screen == null, "Screen still open after the choice: " + mc.screen);
+                var ids = mc.getConnection().getRecipeManager().getRecipes().stream().map(r -> r.id().toString()).filter(id -> id.startsWith("pathbound_test:")).sorted().toList();
+                PROOF.add("client after choice: mode=" + ClientLogic.mode + " torch=" + clientTorchCount(mc) + " kjs=" + ids + " chat=" + CHAT);
+                for (String id : System.getProperty("pathbound.expectRecipes", "").split(",")) {
+                    if (!id.isBlank()) require(ids.contains(id.trim()), "Script recipe " + id + " missing on the client: " + ids);
+                }
+                frame("server-03-after");
+                next("The server applied " + CHOICE + "; recipes reached the client");
+                write("PASS");
+                done = true;
+                mc.getConnection().getConnection().disconnect(net.minecraft.network.chat.Component.literal("Test done"));
+                mc.stop();
             }
             default -> {
                 write("PASS");
